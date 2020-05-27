@@ -39,6 +39,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         print("Disconnected!")
 
     async def receive(self, text_data):
+        user = self.scope['user']
         text_data_json = json.loads(text_data)
         message = text_data_json['message']
 
@@ -53,19 +54,19 @@ class ChatConsumer(AsyncWebsocketConsumer):
         )
         
         if self.curr_state != -1:
-            reply, curr_state = self.chatbot.process_message(message, self.curr_state)
+            reply, curr_state = self.chatbot.process_message(message, self.curr_state, user)
+            print(f'Returned with reply {reply}')
             if isinstance(reply, tuple):
                 curr_state = reply[1]
                 reply = reply[0]
-            if reply is not None:
-                await self.channel_layer.group_send(
-                    self.room_group_name,
-                    {
-                        'type': 'chat_message',
-                        'message': reply,
-                    }
-                )
-                self.curr_state = curr_state
+            await self.channel_layer.group_send(
+                self.room_group_name,
+                {
+                    'type': 'chat_message',
+                    'message': reply,
+                }
+            )
+            self.curr_state = curr_state
     
     # Receive message from the same room group
     async def chat_message(self, event):

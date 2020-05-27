@@ -24,8 +24,6 @@ class ChatBotUser():
         self.content = self.process_template(template)
         self.state = 1
         self.redis_connection = StrictRedis(host=HOST, password=PASSWORD, port=PORT)
-        self.waiting = False
-        self.has_options = False
     
     def process_template(self, template_json):
         # We'll process the template JSON and put it into a Database
@@ -52,76 +50,63 @@ class ChatBotUser():
         return message
 
 
-    def process_message(self, message, initial_state):
-        # We'll process the message here. Important stuff can be cached using redis
-        # NOTE: We're assuming that all states from [1 .. N] are available, and in order
+    def process_message(self, message, initial_state, user):
         self.state = initial_state
-
-        print(f"Currently at state {self.state}")
-
+        print(f"At state {self.state}, received {message}")
         node = self.content['node'][initial_state - 1]
+        self.has_options = False
 
-        if self.waiting is True:
-            self.waiting = False
-            self.state = node['trigger']
-            print(self.state, type(self.state))
-            if isinstance(self.state, list):
-                # We must go to the state, based on the option / response
-                if 'options' in node:
-                    # Option
-                    # Take it based on the message
-                    msg_option = int(message)
-                    print(f"Selected option {msg_option}")
-                    return self.process_message(message, self.state[msg_option]), self.state[msg_option]
-            else:
-                return self.process_message(message, self.state), self.state
-
-        try:
+        if 'store' in node:
             key = node['store']
             self.redis_connection.set(key, message)
-        except KeyError:
-            pass
 
-        try:
-            if node['options'] is not None:
-                self.has_options = True
-                self.options = node['options']
+        if 'options' in node:
+            self.has_options = True
+
+        msg = None
+
+        if 'message' in node:
+            msg = self.insert_placeholders(node['message'], self.has_options)
+
+        if 'options' in node:
+            self.options = node['options']
+            if 'message' in node:
+                msg += '\n'
             else:
-                self.has_options = False
-        except KeyError:
-            self.has_options = False
+                msg = ""
+            for idx, option in enumerate(node['options']):
+                msg += str(idx) + ". " + option + "\n"
+
+        if 'user' in node:
+            # Wait for user input
+            if str(user) != 'AnonymousUser':
+                return None, self.state
+            else:
+                print('Received user input!')
+                if self.has_options is True:
+                    for idx, option in enumerate(node['options']):
+                        if option == message:
+                            print(f"Selected option {option}!")
+                            if isinstance(node['trigger'], list):
+                                next_state = node['trigger'][idx]
+                            else:
+                                next_state = node['trigger']
+                            self.state = next_state
+                            print(f"next_state = {next_state}")
+
+        if 'end' in node:
+            # Last State
+            self.state = -1
+            return self.insert_placeholders(node['message'], self.has_options), self.state
         
-        try:
-            if node['end'] is True:
-                # Last state. Close chat
-                self.state = -1
-                msg = self.insert_placeholders(node['message'], self.has_options) + "\n" + "Thank you for your time. Hope to see you again!"
-                return msg, self.state
-        except KeyError:
-            # Move to the next state
-            try:
-                self.state = node['trigger']
-            except KeyError:
-                raise ValueError("This shouldn't happen. We must have either a trigger or an end")
-            try:
-                return self.insert_placeholders(node['message'], self.has_options), self.state
-            except KeyError:
-                # Return the message of the next state
-                if 'user' in node:
-                    self.waiting = True
-                    msg = self.content['node'][self.state - 1]['message']
-                    msg = self.insert_placeholders(msg, self.has_options)
-                    next_state = node['trigger']
-                    print(f'user => next_state = {next_state}')
-                    if isinstance(next_state, list):
-                        # We must go to the state, based on the option / response
-                        if self.has_options is True:
-                            # Option
-                            # Take it based on the message
-                            msg_option = int(message)
-                            print(f"Selected option {msg_option}")
-                            return self.process_message(message, self.state[msg_option]), self.state[msg_option]
-                        else:
-                            raise ValueError('Has no options???')
-                    return self.process_message(msg, node['trigger']), self.state
-                return self.process_message(message, node['trigger']), self.state
+        if 'trigger' in node:
+            if isinstance(node['trigger'], list):
+                pass
+            else:
+                next_state = node['trigger']
+            if 'message' in node:
+                return msg, next_state
+            else:
+                return self.process_message(msg, next_state, user), next_state
+        else:
+            pass
