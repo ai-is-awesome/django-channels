@@ -48,7 +48,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.room_group_name,
             {
                 'type': 'chat_message',
-                'message': message
+                'message': message,
             }
         )
         
@@ -57,14 +57,15 @@ class ChatConsumer(AsyncWebsocketConsumer):
             if isinstance(reply, tuple):
                 curr_state = reply[1]
                 reply = reply[0]
-            await self.channel_layer.group_send(
-                self.room_group_name,
-                {
-                    'type': 'chat_message',
-                    'message': reply
-                }
-            )
-            self.curr_state = curr_state
+            if reply is not None:
+                await self.channel_layer.group_send(
+                    self.room_group_name,
+                    {
+                        'type': 'chat_message',
+                        'message': reply,
+                    }
+                )
+                self.curr_state = curr_state
     
     # Receive message from the same room group
     async def chat_message(self, event):

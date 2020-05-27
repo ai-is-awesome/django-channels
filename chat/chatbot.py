@@ -24,6 +24,8 @@ class ChatBotUser():
         self.content = self.process_template(template)
         self.state = 1
         self.redis_connection = StrictRedis(host=HOST, password=PASSWORD, port=PORT)
+        self.waiting = False
+        self.has_options = False
     
     def process_template(self, template_json):
         # We'll process the template JSON and put it into a Database
@@ -33,14 +35,20 @@ class ChatBotUser():
         return content
     
 
-    def insert_placeholders(self, message):
+    def insert_placeholders(self, message, has_options):
         # Hello {username} => Hello {redis_connection.get('username')}
         pattern = r"\{([A-Za-z0-9_]+)\}"
         encoding = 'utf-8'
         def replace_function(match):
+            # Strip away the '{' and '}' from the match string
             match = match.group()[1:-1]
+            # Redis gives us a byte string. Decode that to 'utf-8' and convert to a string
             return str(self.redis_connection.get(match).decode(encoding))
         message = re.sub(pattern, replace_function, message)
+        if has_options is True:
+            message += '\n'
+            for idx, option in enumerate(self.options):
+                message += str(idx) + '. ' + option + '\n'
         return message
 
 
@@ -49,7 +57,24 @@ class ChatBotUser():
         # NOTE: We're assuming that all states from [1 .. N] are available, and in order
         self.state = initial_state
 
+        print(f"Currently at state {self.state}")
+
         node = self.content['node'][initial_state - 1]
+
+        if self.waiting is True:
+            self.waiting = False
+            self.state = node['trigger']
+            print(self.state, type(self.state))
+            if isinstance(self.state, list):
+                # We must go to the state, based on the option / response
+                if 'options' in node:
+                    # Option
+                    # Take it based on the message
+                    msg_option = int(message)
+                    print(f"Selected option {msg_option}")
+                    return self.process_message(message, self.state[msg_option]), self.state[msg_option]
+            else:
+                return self.process_message(message, self.state), self.state
 
         try:
             key = node['store']
@@ -58,10 +83,19 @@ class ChatBotUser():
             pass
 
         try:
+            if node['options'] is not None:
+                self.has_options = True
+                self.options = node['options']
+            else:
+                self.has_options = False
+        except KeyError:
+            self.has_options = False
+        
+        try:
             if node['end'] is True:
                 # Last state. Close chat
                 self.state = -1
-                msg = self.insert_placeholders(node['message']) + "\n" + "Thank you for your time. Hope to see you again!"
+                msg = self.insert_placeholders(node['message'], self.has_options) + "\n" + "Thank you for your time. Hope to see you again!"
                 return msg, self.state
         except KeyError:
             # Move to the next state
@@ -70,7 +104,24 @@ class ChatBotUser():
             except KeyError:
                 raise ValueError("This shouldn't happen. We must have either a trigger or an end")
             try:
-                return self.insert_placeholders(node['message']), self.state
+                return self.insert_placeholders(node['message'], self.has_options), self.state
             except KeyError:
                 # Return the message of the next state
+                if 'user' in node:
+                    self.waiting = True
+                    msg = self.content['node'][self.state - 1]['message']
+                    msg = self.insert_placeholders(msg, self.has_options)
+                    next_state = node['trigger']
+                    print(f'user => next_state = {next_state}')
+                    if isinstance(next_state, list):
+                        # We must go to the state, based on the option / response
+                        if self.has_options is True:
+                            # Option
+                            # Take it based on the message
+                            msg_option = int(message)
+                            print(f"Selected option {msg_option}")
+                            return self.process_message(message, self.state[msg_option]), self.state[msg_option]
+                        else:
+                            raise ValueError('Has no options???')
+                    return self.process_message(msg, node['trigger']), self.state
                 return self.process_message(message, node['trigger']), self.state
