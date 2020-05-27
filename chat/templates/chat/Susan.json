@@ -8,11 +8,12 @@
         {
         "id": 2,
         "user": true,
+        "store": "username",
         "trigger": 3
         },
         {
             "id": 3,
-            "message": "Hi {previousValue}, nice to meet you!",
+            "message": "Hi {username}, nice to meet you!",
             "end": true
         }
     ]

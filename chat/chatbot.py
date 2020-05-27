@@ -1,4 +1,8 @@
+import re
+import os
 import json
+from decouple import Config, RepositoryEnv
+from redis import StrictRedis
 
 room_to_chatbot_user = {
     # Contains a mapping from the room names to the Chatbot Users
@@ -7,21 +11,66 @@ room_to_chatbot_user = {
     'default': 'Gerald',
 }
 
+DOTENV_FILE = os.path.join(os.getcwd(), 'livechat', '.env')
+env_config = Config(RepositoryEnv(DOTENV_FILE))
+
+HOST = env_config.get('REDIS_SERVER_HOST')
+PASSWORD = env_config.get('REDIS_SERVER_PASSWORD')
+PORT = env_config.get('REDIS_SERVER_PORT')
+
 class ChatBotUser():
     def __init__(self, chatbot_user, template):
         self.name = chatbot_user
-        self.commands = self.process_template(template)
-    
+        self.content = self.process_template(template)
+        self.state = 1
+        self.redis_connection = StrictRedis(host=HOST, password=PASSWORD, port=PORT)
     
     def process_template(self, template_json):
         # We'll process the template JSON and put it into a Database
         file_obj = open(template_json, 'rb')
-        content = file_obj.read()
+        content = json.load(file_obj)
         file_obj.close()
-        template = json.loads(content)
-        return template
+        return content
+    
+
+    def insert_placeholders(self, message):
+        # Hello {username} => Hello {redis_connection.get('username')}
+        pattern = r"\{([A-Za-z0-9_]+)\}"
+        encoding = 'utf-8'
+        def replace_function(match):
+            match = match.group()[1:-1]
+            return str(self.redis_connection.get(match).decode(encoding))
+        message = re.sub(pattern, replace_function, message)
+        return message
 
 
-    def process_message(self, message):
+    def process_message(self, message, initial_state):
         # We'll process the message here. Important stuff can be cached using redis
-        pass
+        # NOTE: We're assuming that all states from [1 .. N] are available, and in order
+        self.state = initial_state
+
+        node = self.content['node'][initial_state - 1]
+
+        try:
+            key = node['store']
+            self.redis_connection.set(key, message)
+        except KeyError:
+            pass
+
+        try:
+            if node['end'] is True:
+                # Last state. Close chat
+                self.state = -1
+                msg = self.insert_placeholders(node['message']) + "\n" + "Thank you for your time. Hope to see you again!"
+                return msg, self.state
+        except KeyError:
+            # Move to the next state
+            try:
+                self.state = node['trigger']
+            except KeyError:
+                raise ValueError("This shouldn't happen. We must have either a trigger or an end")
+            try:
+                return self.insert_placeholders(node['message']), self.state
+            except KeyError:
+                # Return the message of the next state
+                return self.process_message(message, node['trigger']), self.state
