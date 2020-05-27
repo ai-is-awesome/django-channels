@@ -1,37 +1,46 @@
 {
     "node": [
         {
-        "id": 1,
-        "message": "What is your name?",
-        "trigger": 2
+            "id": 1,
+            "message": "What is your name?",
+            "trigger": 2
         },
         {
-        "id": 2,
-        "user": true,
-        "store": "username",
-        "trigger": 3
+            "id": 2,
+            "user": true,
+            "store": "username",
+            "trigger": 3
         },
         {
             "id": 3,
             "message": "Hi {username}, nice to meet you!  Do you want to continue the chat?",
-            "user": true,
-            "options": ["yes", "no"],
-            "trigger": [5, 4]
+            "trigger": 5
         },
         {
             "id": 4,
+            "message": "Alright. Do chat again later!",
             "end": true
         },
         {
             "id": 5,
-            "message": "Great! Can you specify what car you want to buy?",
             "user": true,
-            "store": "car_brand",
-            "options": ["Ferrari", "Aston Martin DB9", "Audi R8"],
-            "trigger": 6
+            "options": ["yes", "no"],
+            "trigger": [6, 4]
         },
         {
             "id": 6,
+            "message": "Great! Can you specify what car you want to buy?",
+            "trigger": 7
+        },
+        {
+            "id": 7,
+            "user": true,
+            "store": "car_brand",
+            "options": ["Ferrari", "Aston Martin DB9", "Audi R8"],
+            "trigger": 8
+        },
+        {
+            "id": 8,
             "message": "Sorry, we don't have {car_brand} here.",
             "end": true
         }
