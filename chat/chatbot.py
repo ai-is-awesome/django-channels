@@ -104,6 +104,17 @@ class ChatBotUser():
                 pass
             else:
                 next_state = node['trigger']
+            try:
+                # Check if the next node needs user input
+                next_node = self.content['node'][next_state - 1]
+                if 'user' in next_node:
+                    if 'message' in next_node:
+                        msg += '\n' + next_node['message']
+                    if 'options' in next_node:
+                        for idx, option in enumerate(next_node['options']):
+                            msg += '\n' + str(idx) + '. ' + option
+            except IndexError:
+                pass
             if 'message' in node:
                 return msg, next_state
             else:
