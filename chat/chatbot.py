@@ -52,9 +52,15 @@ class ChatBotUser():
 
     def process_message(self, message, initial_state, user):
         self.state = initial_state
+        
         print(f"At state {self.state}, received {message}")
+        
         node = self.content['node'][initial_state - 1]
+        
         self.has_options = False
+
+        # The type of the reply from the Chatbot (text, button, etc)
+        self.msg_type = None
 
         if 'store' in node:
             key = node['store']
@@ -80,7 +86,7 @@ class ChatBotUser():
         if 'user' in node:
             # Wait for user input
             if str(user) != 'AnonymousUser':
-                return None, self.state
+                return None, self.state, None
             else:
                 print('Received user input!')
                 if self.has_options is True:
@@ -97,7 +103,7 @@ class ChatBotUser():
         if 'end' in node:
             # Last State
             self.state = -1
-            return self.insert_placeholders(node['message'], self.has_options), self.state
+            return self.insert_placeholders(node['message'], self.has_options), self.state, self.msg_type
         
         if 'trigger' in node:
             if isinstance(node['trigger'], list):
@@ -113,11 +119,14 @@ class ChatBotUser():
                     if 'options' in next_node:
                         for idx, option in enumerate(next_node['options']):
                             msg += '\n' + str(idx) + '. ' + option
+                    if 'type' in next_node:
+                        self.msg_type = next_node['type']
+                        #msg += '\n' + 'Type: ' + next_node['type']
             except IndexError:
                 pass
             if 'message' in node:
-                return msg, next_state
+                return msg, next_state, self.msg_type
             else:
-                return self.process_message(msg, next_state, user), next_state
+                return self.process_message(msg, next_state, user), next_state, self.msg_type
         else:
             pass

@@ -9,7 +9,8 @@
             "id": 2,
             "user": true,
             "store": "username",
-            "trigger": 3
+            "trigger": 3,
+            "type": "text"
         },
         {
             "id": 3,
@@ -37,7 +38,8 @@
             "user": true,
             "store": "car_brand",
             "options": ["Ferrari", "Aston Martin DB9", "Audi R8"],
-            "trigger": 8
+            "trigger": 8,
+            "type": "button"
         },
         {
             "id": 8,

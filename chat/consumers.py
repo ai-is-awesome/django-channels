@@ -48,31 +48,47 @@ class ChatConsumer(AsyncWebsocketConsumer):
         await self.channel_layer.group_send(
             self.room_group_name,
             {
-                'type': 'chat_message',
+                'type': 'chat_message_from_client',
                 'message': message,
             }
         )
         
         if self.curr_state != -1:
-            reply, curr_state = self.chatbot.process_message(message, self.curr_state, user)
-            print(f'Returned with reply {reply}')
+            reply, curr_state, msg_type = self.chatbot.process_message(message, self.curr_state, user)
+            
+            print(f'Returned with reply {reply} with type = {msg_type}')
+            
             if isinstance(reply, tuple):
+                msg_type = reply[2]
                 curr_state = reply[1]
                 reply = reply[0]
+            
+            if msg_type == None:
+                msg_type = 'None'
+            
+            # Sending high-level events over the channel layer
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
-                    'type': 'chat_message',
+                    'type': 'chat_message_to_client',
+                    'room_name': self.room_name,
                     'message': reply,
+                    'message_type': msg_type,
                 }
             )
+            
             self.curr_state = curr_state
     
-    # Receive message from the same room group
-    async def chat_message(self, event):
-        message = event['message']
-
-        # Send message to WebSocket
+    
+    async def chat_message_from_client(self, event):
         await self.send(text_data=json.dumps({
-            'message': message
+            'message': event['message'],
+        }))
+
+
+    async def chat_message_to_client(self, event):
+        await self.send(text_data=json.dumps({
+            'room_name': event['room_name'],
+            'message': event['message'],
+            'message_type': event['message_type'],
         }))
