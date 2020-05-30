@@ -15,7 +15,7 @@ DOTENV_FILE = os.path.join(os.getcwd(), 'livechat', '.env')
 env_config = Config(RepositoryEnv(DOTENV_FILE))
 
 HOST = env_config.get('REDIS_SERVER_HOST')
-PASSWORD = env_config.get('REDIS_SERVER_PASSWORD')
+#PASSWORD = env_config.get('REDIS_SERVER_PASSWORD')
 PORT = env_config.get('REDIS_SERVER_PORT')
 
 class ChatBotUser():
@@ -23,7 +23,7 @@ class ChatBotUser():
         self.name = chatbot_user
         self.content = self.process_template(template)
         self.state = 1
-        self.redis_connection = StrictRedis(host=HOST, password=PASSWORD, port=PORT)
+        self.redis_connection = StrictRedis(host=HOST, port=PORT)
     
     def process_template(self, template_json):
         # We'll process the template JSON and put it into a Database
