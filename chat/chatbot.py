@@ -1,7 +1,7 @@
 import re
 import os
 import json
-from decouple import Config, RepositoryEnv
+from decouple import Config, RepositoryEnv, UndefinedValueError
 from redis import StrictRedis
 
 room_to_chatbot_user = {
@@ -15,7 +15,10 @@ DOTENV_FILE = os.path.join(os.getcwd(), 'livechat', '.env')
 env_config = Config(RepositoryEnv(DOTENV_FILE))
 
 HOST = env_config.get('REDIS_SERVER_HOST')
-#PASSWORD = env_config.get('REDIS_SERVER_PASSWORD')
+try:
+    PASSWORD = env_config.get('REDIS_SERVER_PASSWORD')
+except UndefinedValueError:
+    PASSWORD = None
 PORT = env_config.get('REDIS_SERVER_PORT')
 
 class ChatBotUser():
@@ -23,7 +26,10 @@ class ChatBotUser():
         self.name = chatbot_user
         self.content = self.process_template(template)
         self.state = 1
-        self.redis_connection = StrictRedis(host=HOST, port=PORT)
+        if PASSWORD == None:
+            self.redis_connection = StrictRedis(host=HOST, port=PORT)
+        else:
+            self.redis_connection = StrictRedis(host=HOST, password=PASSWORD, port=PORT)
     
     def process_template(self, template_json):
         # We'll process the template JSON and put it into a Database

@@ -8,6 +8,7 @@ SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', cast=bool) 
 
 # Database Settings
+<<<<<<< Updated upstream
 # DATABASES = {
 #     'default': {
 #         'ENGINE': 'django.db.backends.mysql',
@@ -18,6 +19,19 @@ DEBUG = config('DEBUG', cast=bool)
 #         'PORT': config('DB_PORT')
 #     },
 # }
+=======
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3'
+        #'ENGINE': 'django.db.backends.mysql',
+        #'NAME': config('DB_NAME'),
+        #'USER': config('DB_USER'),
+        #'PASSWORD': config('DB_PASSWORD'),
+        #'HOST': config('DB_HOST'),
+        #'PORT': config('DB_PORT')
+    },
+}
+>>>>>>> Stashed changes
 
 CHANNEL_LAYERS = {
     'default': {
