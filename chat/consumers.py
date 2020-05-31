@@ -107,18 +107,34 @@ class AdminChatConsumer(WebsocketConsumer):
         self.room_name = self.scope['url_route']['kwargs']['room_name']
         self.room_group_name = 'chat_%s' % self.room_name
 
+        self.num_members = 0
+
         # Join room group
         async_to_sync(self.channel_layer.group_add)(
             self.room_group_name,
             self.channel_name
         )
+
         user = self.scope['user']
         print('user is', user)
+
+
+        
         if user.is_authenticated and user.is_superuser:
             print('User is admin')
             self.accept()
+            self.num_members += 1
+            print(f"Now room has {self.num_members} members")
         else:
             print('User isnt admin')
+            if self.num_members == 0:
+                print('First member. Waiting for the admin...')
+                self.accept()
+                self.num_members += 1
+                print(f"Now room has {self.num_members} members")
+            else:
+                print("Too many members. Cannot join this room. Sorry")
+
 
     def disconnect(self, close_code):
         # Leave room group
@@ -126,6 +142,8 @@ class AdminChatConsumer(WebsocketConsumer):
             self.room_group_name,
             self.channel_name
         )
+        self.num_members -= 1
+        print(f"Now room has {self.num_members} members")
 
     # Receive message from WebSocket
     def receive(self, text_data):
@@ -143,6 +161,7 @@ class AdminChatConsumer(WebsocketConsumer):
 
     # Receive message from room group
     def chat_message(self, event):
+        print(self.scope['url_route'])
         print('event', event)
         message = event['message']
 

@@ -10,3 +10,8 @@ def room(request, room_name):
 	return render(request, 'chat/room.html', {
 		'room_name': room_name
 	})
+
+def adminroom(request, room_name):
+	return render(request, 'chat/admin_room.html', {
+		'room_name': room_name
+	})
