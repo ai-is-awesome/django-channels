@@ -24,7 +24,7 @@ PORT = env_config.get('REDIS_SERVER_PORT')
 class ChatBotUser():
     def __init__(self, chatbot_user, template):
         self.name = chatbot_user
-        self.content = self.process_template(template)
+        self.content, self.hashmap = self.process_template(template)
         self.state = 1
         if PASSWORD == None:
             self.redis_connection = StrictRedis(host=HOST, port=PORT)
@@ -36,7 +36,15 @@ class ChatBotUser():
         file_obj = open(template_json, 'rb')
         content = json.load(file_obj)
         file_obj.close()
-        return content
+
+        # Create a hashmap to sequentially order the id's
+        hashmap = dict()
+        curr = 1
+        for node in content['node']:
+            if 'id' in node:
+                hashmap[node['id']] = curr
+                curr += 1
+        return content, hashmap
     
 
     def insert_placeholders(self, message, has_options):
@@ -100,9 +108,9 @@ class ChatBotUser():
                         if option == message:
                             print(f"Selected option {option}!")
                             if isinstance(node['trigger'], list):
-                                next_state = node['trigger'][idx]
+                                next_state = self.hashmap[node['trigger'][idx]]
                             else:
-                                next_state = node['trigger']
+                                next_state = self.hashmap[node['trigger']]
                             self.state = next_state
                             print(f"next_state = {next_state}")
 
@@ -115,7 +123,7 @@ class ChatBotUser():
             if isinstance(node['trigger'], list):
                 pass
             else:
-                next_state = node['trigger']
+                next_state = self.hashmap[node['trigger']]
             try:
                 # Check if the next node needs user input
                 next_node = self.content['node'][next_state - 1]

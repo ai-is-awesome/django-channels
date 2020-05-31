@@ -3,10 +3,10 @@
         {
             "id": 1,
             "message": "What is your name?",
-            "trigger": 2
+            "trigger": 20
         },
         {
-            "id": 2,
+            "id": 20,
             "user": true,
             "store": "username",
             "trigger": 3,
@@ -15,18 +15,18 @@
         {
             "id": 3,
             "message": "Hi {username}, nice to meet you!  Do you want to continue the chat?",
-            "trigger": 5
+            "trigger": 15
         },
         {
-            "id": 4,
+            "id": 40,
             "message": "Alright. Do chat again later!",
             "end": true
         },
         {
-            "id": 5,
+            "id": 15,
             "user": true,
             "options": ["yes", "no"],
-            "trigger": [6, 4]
+            "trigger": [6, 40]
         },
         {
             "id": 6,
