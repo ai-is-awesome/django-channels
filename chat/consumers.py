@@ -4,6 +4,8 @@ from asgiref.sync import async_to_sync, sync_to_async
 from channels.generic.websocket import AsyncWebsocketConsumer, WebsocketConsumer
 from .chatbot import room_to_chatbot_user, ChatBotUser
 
+num_users = 0
+
 # Asynchronous websocket consumer
 # Our suitable websocket routes will end up here
 class ChatConsumer(AsyncWebsocketConsumer):
@@ -92,6 +94,13 @@ class ChatConsumer(AsyncWebsocketConsumer):
             'message': event['message'],
             'message_type': event['message_type'],
         }))
+    
+    # Chat messages from admin
+    async def chat_message(self, event):
+        print('Received msg from admin')
+        await self.send(text_data=json.dumps({
+            'message': event['message'],
+            }))
 
 
 
@@ -104,6 +113,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
 class AdminChatConsumer(WebsocketConsumer):
     def connect(self):
+        global num_users
         self.room_name = self.scope['url_route']['kwargs']['room_name']
         self.room_group_name = 'chat_%s' % self.room_name
 
@@ -115,8 +125,11 @@ class AdminChatConsumer(WebsocketConsumer):
             self.channel_name
         )
 
+        num_users += 1
+        self.user_id = num_users
+
         user = self.scope['user']
-        print('user is', user)
+        print(f'user is {user}{num_users}')
 
 
         
@@ -161,8 +174,7 @@ class AdminChatConsumer(WebsocketConsumer):
 
     # Receive message from room group
     def chat_message(self, event):
-        print(self.scope['url_route'])
-        print('event', event)
+        # print(f"{self.user_id} sent message")
         message = event['message']
 
         # Send message to WebSocket
