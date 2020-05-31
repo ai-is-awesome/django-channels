@@ -1,53 +1,59 @@
 import os
 import json
 from asgiref.sync import async_to_sync, sync_to_async
-from channels.generic.websocket import AsyncWebsocketConsumer, WebsocketConsumer
+from channels.generic.websocket import WebsocketConsumer
 from .chatbot import room_to_chatbot_user, ChatBotUser
 
+# Tracks the total number of users using the admin channel
 num_users = 0
+
+# Maximum number of members in a group
+threshold = 4
 
 # Asynchronous websocket consumer
 # Our suitable websocket routes will end up here
-class ChatConsumer(AsyncWebsocketConsumer):
-    async def connect(self):
+class ChatConsumer(WebsocketConsumer):
+    def connect(self):
         self.room_name = self.scope['url_route']['kwargs']['room_name']
         self.room_group_name = f'chat_{self.room_name}'
 
         # Join room group
-        await self.channel_layer.group_add(
+        async_to_sync(self.channel_layer.group_add)(
             self.room_group_name,
             self.channel_name
         )
 
         # TODO: Accept only if the user is authorized
         # Make accept() as the last call
-        await self.accept()
+        self.accept()
+
         print(f"Connected")
+        
         try:
             self.chatbot_user = room_to_chatbot_user[self.room_name]
         except KeyError:
             self.chatbot_user = room_to_chatbot_user['default']
+        
         print(f"Redirecting you to {self.chatbot_user}....")
-        self.chatbot = ChatBotUser(self.chatbot_user, os.path.join(os.getcwd(), "chat\\templates\\chat\\" + self.chatbot_user + ".json"))
-        # print(self.chatbot.content)
+        
+        self.chatbot = ChatBotUser(self.chatbot_user, os.path.join(os.getcwd(), "chat/templates/chat/" + self.chatbot_user + ".json"))
         self.curr_state = 1
-        # self.send(text_data=f"Welcome user!")
     
-    async def disconnect(self, close_code):
-        await self.channel_layer.group_discard(
+    def disconnect(self, close_code):
+        async_to_sync(self.channel_layer.group_discard)(
             self.room_group_name,
             self.channel_name
         )
         print("Disconnected!")
 
-    async def receive(self, text_data):
+    def receive(self, text_data):
         user = self.scope['user']
         text_data_json = json.loads(text_data)
         message = text_data_json['message']
 
         # reply = sync_to_async(self.chatbot.process_message(message))
         # Send the message to our group
-        await self.channel_layer.group_send(
+        async_to_sync(self.channel_layer.group_send)(
             self.room_group_name,
             {
                 'type': 'chat_message_from_client',
@@ -69,7 +75,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 msg_type = 'None'
             
             # Sending high-level events over the channel layer
-            await self.channel_layer.group_send(
+            async_to_sync(self.channel_layer.group_send)(
                 self.room_group_name,
                 {
                     'type': 'chat_message_to_client',
@@ -82,42 +88,32 @@ class ChatConsumer(AsyncWebsocketConsumer):
             self.curr_state = curr_state
     
     
-    async def chat_message_from_client(self, event):
-        await self.send(text_data=json.dumps({
+    def chat_message_from_client(self, event):
+        self.send(text_data=json.dumps({
             'message': event['message'],
         }))
 
 
-    async def chat_message_to_client(self, event):
-        await self.send(text_data=json.dumps({
+    def chat_message_to_client(self, event):
+        self.send(text_data=json.dumps({
         'room_name': event['room_name'],
             'message': event['message'],
             'message_type': event['message_type'],
         }))
     
-    # Chat messages from admin
-    async def chat_message(self, event):
-        print('Received msg from admin')
-        await self.send(text_data=json.dumps({
+    # Chat messages from admin (Not used here as of now)
+    def chat_message(self, event):
+        self.send(text_data=json.dumps({
             'message': event['message'],
             }))
 
 
-
-
-
-
-
-
-
-
 class AdminChatConsumer(WebsocketConsumer):
     def connect(self):
-        global num_users
+        global num_users, threshold
+
         self.room_name = self.scope['url_route']['kwargs']['room_name']
         self.room_group_name = 'chat_%s' % self.room_name
-
-        self.num_members = 0
 
         # Join room group
         async_to_sync(self.channel_layer.group_add)(
@@ -130,33 +126,30 @@ class AdminChatConsumer(WebsocketConsumer):
 
         user = self.scope['user']
         print(f'user is {user}{num_users}')
-
-
         
-        if user.is_authenticated and user.is_superuser:
+        if user.is_authenticated and user.is_superuser and num_users <= threshold:
             print('User is admin')
             self.accept()
-            self.num_members += 1
-            print(f"Now room has {self.num_members} members")
+            num_users += 1
+            print(f"Now room has {num_users} members")
         else:
             print('User isnt admin')
-            if self.num_members == 0:
-                print('First member. Waiting for the admin...')
+            if num_users <= threshold:
                 self.accept()
-                self.num_members += 1
-                print(f"Now room has {self.num_members} members")
+                print(f"Now group has {num_users} members")
             else:
-                print("Too many members. Cannot join this room. Sorry")
+                print("Too many members. Cannot join this group. Sorry")
 
 
     def disconnect(self, close_code):
         # Leave room group
+        global num_users, threshold
         async_to_sync(self.channel_layer.group_discard)(
             self.room_group_name,
             self.channel_name
         )
-        self.num_members -= 1
-        print(f"Now room has {self.num_members} members")
+        num_users -= 1
+        print(f"Now group has {num_users} members")
 
     # Receive message from WebSocket
     def receive(self, text_data):
@@ -181,15 +174,3 @@ class AdminChatConsumer(WebsocketConsumer):
         self.send(text_data=json.dumps({
             'message': message
         }))
-
-
-
-
-
-
-
-
-
-
-
-
