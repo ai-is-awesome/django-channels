@@ -18,24 +18,29 @@ I've also placed a limit on the number of users in the room (refer the `threshol
 ## About the Template JSON File
 The id's of the nodes in the template json file need *not* be ordered. There is suitable logic to handle this, using a hashmap to map these unordered id's into an ordered list. As long as the id's belong to those in the file, they need not be sequential.
 
+## About handling Websocket connections
+In the first mode, the Javascript uses Socket.io Websockets to create a websocket, and handle events on that socket object. Once the bot switches to the second mode, the existing websocket (`ws://chat/room_name`) is closed and a new websocket (`ws://adminchat/room_name`) is created, for maintaining a socket corresponding to the admin livechat.
+
+Here onwards, `chat/chatbot.py` will no longer be of use, since it is a live admin user who is talking to the end-user.
+
 ## Instructions for running the server
 1. Go to `settings.py` and add your server machine's IP address to `ALLOWED_HOSTS`.
 2. Go to `livechat/.env` and change it accordingly, to add your suitable redis server credentials. The database credentials need *NOT* be used. If your redis server doesn't have a password, you must remove the `REDIS_SERVER_PASSWORD ` field.
 3. TO run the server, ideally create some admins first, using:
-```python
-python manage.py createsuperuseer
+```bash
+python manage.py createsuperuser
 ```
 
 Add as many admins as you wish
 
 Finally, make migrations using:
-```python
+```bash
 python manage.py makemigrations
 python manage.py migrate
 ```
 
 4. Run the server (on port 8000) using:
-```python
+```bash
 python manage.py runserver 0.0.0.0:8000
 ```
 
