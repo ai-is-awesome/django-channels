@@ -110,7 +110,7 @@ class ChatConsumer(WebsocketConsumer):
 
 class AdminChatConsumer(WebsocketConsumer):
 
-    def get_group_name:
+    def get_group_name(self):
         pass
         
 

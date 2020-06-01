@@ -100,7 +100,7 @@ class ChatBotUser():
         if 'user' in node:
             # Wait for user input
             print(f"Current user {user}")
-            if 'AnonymousUser' in str(user):
+            if 'AnonymousUser' not in str(user):
                 return None, self.state, None
             else:
                 print('Received user input!')
