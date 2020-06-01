@@ -4,7 +4,7 @@ This is a sample bi-modal Chatbot, which handles inputs in two ways -
 * Using a template `JSON` file (here, for illustration, the template JSON files can be found at `chat/templates/chat/*.json`)
 * Using a live-chat based communication, between an actual administrator user and the end-user.
 
-Initially, the bot is using the tempalte json file to respond to the end-user (in this case, the bot is called `Susan`, so it uses `Susan.json`)
+Initially, the bot is using the template json file to respond to the end-user (in this case, the bot is called `Susan`, so it uses `Susan.json`)
 The end-user is anonymous, and does not need to register themselves in order to chat with the template bot.
 
 During the communication, whenever the end-user types `admin`, the chatbot will go into the second mode, where it will redirect the communication to an actual registered admin.
@@ -14,6 +14,9 @@ Here, you can create and register an admin in `localhost:PORT_NO/admin`, using s
 Now, the chat will be between the actual admin and the end-user. I've assumed that any admin can come and join this live-chat, but only one client can chat in the room.
 
 I've also placed a limit on the number of users in the room (refer the `threshold` variable in `chat/consumers.py`)
+
+## About the Template JSON File
+The id's of the nodes in the template json file need *not* be ordered. There is suitable logic to handle this, using a hashmap to map these unordered id's into an ordered list. As long as the id's belong to those in the file, they need not be sequential.
 
 ## Instructions for running the server
 1. Go to `settings.py` and add your server machine's IP address to `ALLOWED_HOSTS`.
