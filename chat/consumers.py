@@ -109,6 +109,11 @@ class ChatConsumer(WebsocketConsumer):
 
 
 class AdminChatConsumer(WebsocketConsumer):
+
+    def get_group_name:
+        pass
+        
+
     def connect(self):
         global num_users, threshold
 
