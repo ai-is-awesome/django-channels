@@ -121,13 +121,12 @@ class AdminChatConsumer(WebsocketConsumer):
             self.channel_name
         )
 
-        num_users += 1
         self.user_id = num_users
 
         user = self.scope['user']
         print(f'user is {user}{num_users}')
         
-        if user.is_authenticated and user.is_superuser and num_users <= threshold:
+        if user.is_authenticated and user.is_superuser and num_users < threshold:
             print('User is admin')
             self.accept()
             num_users += 1
@@ -136,6 +135,7 @@ class AdminChatConsumer(WebsocketConsumer):
             print('User isnt admin')
             if num_users <= threshold:
                 self.accept()
+                num_users += 1
                 print(f"Now group has {num_users} members")
             else:
                 print("Too many members. Cannot join this group. Sorry")
