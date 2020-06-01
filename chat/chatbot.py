@@ -117,7 +117,8 @@ class ChatBotUser():
                             print(f"next_state = {next_state}")
                     if next_state == None:
                         # User has entered a bogus option
-                        print(f"Entered a bogus option")
+                        # Remain in the same state, but indicate error
+                        return self.handle_error(message), initial_state, self.msg_type
 
 
         if 'end' in node:
@@ -151,3 +152,8 @@ class ChatBotUser():
                 return self.process_message(msg, next_state, user), next_state, self.msg_type
         else:
             pass
+    
+
+    def handle_error(self, message):
+        # Handles erroneous messages
+        return f"Invalid Option: \'{message}\'"
