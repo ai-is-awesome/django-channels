@@ -104,6 +104,7 @@ class ChatBotUser():
                 return None, self.state, None
             else:
                 print('Received user input!')
+                next_state = None
                 if self.has_options is True:
                     for idx, option in enumerate(node['options']):
                         if option == message:
@@ -114,6 +115,10 @@ class ChatBotUser():
                                 next_state = self.hashmap[node['trigger']]
                             self.state = next_state
                             print(f"next_state = {next_state}")
+                    if next_state == None:
+                        # User has entered a bogus option
+                        print(f"Entered a bogus option")
+
 
         if 'end' in node:
             # Last State
@@ -137,7 +142,8 @@ class ChatBotUser():
                     if 'type' in next_node:
                         self.msg_type = next_node['type']
                         #msg += '\n' + 'Type: ' + next_node['type']
-            except IndexError:
+            except (IndexError, TypeError):
+                # TypeError is when next_state == None
                 pass
             if 'message' in node:
                 return msg, next_state, self.msg_type
